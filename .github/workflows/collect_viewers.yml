@@ -1,0 +1,37 @@
+name: Recolectar viewers cada 15 minutos
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # Cada 15 minutos
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Recolectar viewers
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python scripts/collect_viewers.py
+
+      - name: Guardar datos en el repo
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add data/viewers.csv
+          git diff --staged --quiet || git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
