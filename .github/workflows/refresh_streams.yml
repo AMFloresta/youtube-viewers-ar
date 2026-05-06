@@ -1,0 +1,37 @@
+name: Refrescar streams en vivo
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Cada 6 horas
+  workflow_dispatch:          # También permite correrlo manualmente
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Refrescar IDs de streams
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python scripts/refresh_streams.py
+
+      - name: Guardar cambios
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add data/current_streams.json
+          git diff --staged --quiet || git commit -m "refresh: streams $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
