@@ -2,7 +2,10 @@ import os
 import csv
 import json
 import requests
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+BUE = ZoneInfo('America/Argentina/Buenos_Aires')
 
 API_KEY = os.environ['YOUTUBE_API_KEY']
 BASE_URL = 'https://www.googleapis.com/youtube/v3'
@@ -45,7 +48,7 @@ def main():
     viewers_map = get_concurrent_viewers(video_ids)
 
     # Armar la fila con timestamp + viewers por canal
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.now(BUE).strftime('%Y-%m-%d %H:%M:%S')
     channel_names = list(streams.keys())
     row = {'timestamp': timestamp}
 
