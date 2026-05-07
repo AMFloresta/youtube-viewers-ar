@@ -1,42 +1,97 @@
-name: Recolectar viewers cada 15 minutos
+import os
+import csv
+import json
+import requests
+import subprocess
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-on:
-  schedule:
-    - cron: '*/15 * * * *'   # Cada 15 minutos
-  workflow_dispatch:
+BUE      = ZoneInfo('America/Argentina/Buenos_Aires')
+API_KEY  = os.environ['YOUTUBE_API_KEY']
+GH_TOKEN = os.environ['GITHUB_TOKEN']
+GH_REPO  = 'AMFloresta/youtube-viewers-ar'
+BASE_URL = 'https://www.googleapis.com/youtube/v3'
 
-permissions:
-  contents: write
+def git_push(timestamp):
+    """Hace commit y push del CSV actualizado a GitHub."""
+    remote = f"https://{GH_TOKEN}@github.com/{GH_REPO}.git"
+    cmds = [
+        ['git', 'config', 'user.email', 'render@action.com'],
+        ['git', 'config', 'user.name',  'Render Action'],
+        ['git', 'remote', 'set-url', 'origin', remote],
+        ['git', 'add', 'data/viewers.csv'],
+        ['git', 'commit', '-m', f'data: {timestamp}'],
+        ['git', 'push', 'origin', 'main'],
+    ]
+    for cmd in cmds:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0 and 'nothing to commit' not in result.stdout:
+            print(f"  git: {result.stderr.strip()}")
+    print("  📤 Push a GitHub OK")
 
-jobs:
-  collect:
-    runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+def get_concurrent_viewers(video_ids):
+    """
+    Obtiene viewers simultáneos para una lista de video IDs.
+    Cuesta solo 1 unidad por llamada (sin importar cuántos IDs).
+    """
+    if not video_ids:
+        return {}
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+    params = {
+        'part': 'liveStreamingDetails',
+        'id':   ','.join(video_ids),
+        'key':  API_KEY
+    }
+    r = requests.get(f"{BASE_URL}/videos", params=params)
+    data = r.json()
 
-      - name: Instalar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+    result = {}
+    for item in data.get('items', []):
+        video_id = item['id']
+        raw = item.get('liveStreamingDetails', {}).get('concurrentViewers')
+        result[video_id] = int(raw) if raw else 0
 
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
+    return result
 
-      - name: Recolectar viewers
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: python scripts/collect_viewers.py
+def main():
+    if not os.path.exists('data/current_streams.json'):
+        print("❌ No existe data/current_streams.json. Ejecutá refresh_streams.py primero.")
+        return
 
-      - name: Guardar datos en el repo
-        run: |
-          git config user.email "action@github.com"
-          git config user.name "GitHub Action"
-          git add data/viewers.csv
-          git diff --staged --quiet || git commit -m "data: $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
+    with open('data/current_streams.json') as f:
+        streams = json.load(f)
+
+    # Reunir todos los video IDs válidos
+    video_ids = [info['video_id'] for info in streams.values() if info.get('video_id')]
+
+    viewers_map = get_concurrent_viewers(video_ids)
+
+    # Armar la fila con timestamp + viewers por canal
+    timestamp = datetime.now(BUE).strftime('%Y-%m-%d %H:%M:%S')
+    channel_names = list(streams.keys())
+    row = {'timestamp': timestamp}
+
+    for name, info in streams.items():
+        vid = info.get('video_id')
+        viewers = viewers_map.get(vid, 0) if vid else None
+        row[name] = viewers
+        status = f"{viewers:,}" if viewers is not None else "sin stream"
+        print(f"  {name}: {status} viewers")
+
+    # Guardar en CSV (append)
+    os.makedirs('data', exist_ok=True)
+    csv_path = 'data/viewers.csv'
+    file_exists = os.path.exists(csv_path)
+    fieldnames = ['timestamp'] + channel_names
+
+    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+    print(f"\n✅ Datos guardados — {timestamp}")
+    git_push(timestamp)
+
+if __name__ == '__main__':
+    main()
