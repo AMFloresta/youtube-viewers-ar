@@ -3,30 +3,30 @@
     "handle": "@todonoticias",
     "channel_id": "UCj6PcyLvpnIRT_2W_mwa9Aw",
     "video_id": null,
-    "updated_at": "2026-10-20T11:19:36.955360+00:00"
+    "updated_at": "2026-10-20T16:44:07.776251+00:00"
   },
   "C5N": {
     "handle": "@c5n",
     "channel_id": "UCFgk2Q2mVO1BklRQhSv6p0w",
     "video_id": null,
-    "updated_at": "2026-10-20T11:19:37.126698+00:00"
+    "updated_at": "2026-10-20T16:44:07.926715+00:00"
   },
   "CronicaTV": {
     "handle": "@cronicatv",
     "channel_id": "UCT7KFGv6s2a-rh2Jq8ZdM1g",
     "video_id": null,
-    "updated_at": "2026-10-20T11:19:37.280117+00:00"
+    "updated_at": "2026-10-20T16:44:08.077153+00:00"
   },
   "LaNacion": {
     "handle": "@lanacion",
     "channel_id": "UCba3hpU7EFBSk817y9qZkiA",
-    "video_id": null,
-    "updated_at": "2026-10-20T11:19:37.508067+00:00"
+    "video_id": "Rf3_NI0wc8E",
+    "updated_at": "2026-10-20T16:44:08.236160+00:00"
   },
   "A24": {
     "handle": "@A24com",
     "channel_id": "UCR9120YBAqMfntqgRTKmkjQ",
     "video_id": null,
-    "updated_at": "2026-10-20T11:19:37.681094+00:00"
+    "updated_at": "2026-10-20T16:44:08.505029+00:00"
   }
 }
